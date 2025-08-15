@@ -7,11 +7,17 @@
 
 /* Suggestion popup styling */
 .suggestion-popup {
-  background-color: #fed7aa !important; /* Light orange background */
-  border: 1px solid #fdba74 !important; /* Orange border */
+  background-color: rgba(
+    255,
+    247,
+    237,
+    0.95
+  ) !important; /* Very light, almost translucent orange */
+  border: 1px solid rgba(254, 215, 170, 0.6) !important; /* Light, translucent orange border */
   border-radius: 8px !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
   padding: 16px !important;
+  backdrop-filter: blur(8px) !important; /* Adds subtle blur for translucency */
 }
 
 .suggestion-popup .text-orange-800 {

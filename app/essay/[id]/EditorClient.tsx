@@ -11,6 +11,7 @@ import {
   computeSuggestionPositions,
   handleTextChange
 } from "@/public/suggestionPositionManager";
+import { HighlightsSidebar } from "@/components/ui/highlights-sidebar";
 // import type { Essay, Suggestion } from "@/public/mockDataAdvanced";
 
 type Props = {
@@ -43,6 +44,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   const [anchoredSuggestions, setAnchoredSuggestions] = useState<AnchoredSuggestion[]>([]);
   const [currentEssayText, setCurrentEssayText] = useState(essay.text);
   const changeHistoryRef = useRef<ChangeDesc[]>([]);
+  const [focusedHighlightId, setFocusedHighlightId] = useState<string | null>(null);
 
   // Google Docs-style history: track actual changes, not text snapshots
   const [changeHistory, setChangeHistory] = useState<Array<{
@@ -57,6 +59,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        // Temporarily remove the popup when clicking outside
         setPopup(null);
       }
     };
@@ -245,10 +248,11 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
       // Map the current positions through this change
       start = change.mapPos(start);
       end = change.mapPos(end);
-
-      // Note: change.mapPos already handles the insertion correctly
-      // We don't need to manually expand the end position
     }
+
+    // Ensure positions are valid
+    start = Math.max(0, start);
+    end = Math.max(start, end);
 
     return { start, end };
   };
@@ -314,8 +318,19 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
               if (suggestionId) {
                 const suggestion = anchoredSuggestions.find(s => s.id === suggestionId);
                 if (suggestion) {
-                  const rect = target.getBoundingClientRect();
-                  setPopup({ suggestion, rect });
+                  // Set the focused highlight ID to trigger sidebar scrolling
+                  setFocusedHighlightId(suggestionId);
+
+                  // Add visual focus effect to the highlighted text
+                  target.classList.add('highlight-focus');
+                  setTimeout(() => {
+                    target.classList.remove('highlight-focus');
+                  }, 5000);
+
+                  // Clear the focus after a delay
+                  setTimeout(() => {
+                    setFocusedHighlightId(null);
+                  }, 5000);
                 }
               }
             }
@@ -348,11 +363,11 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           },
           ".cm-content": {
             lineHeight: "1.6",
-            padding: "0"
+            padding: "0",
+            textAlign: "justify"
           },
           ".suggestion-highlight": {
             backgroundColor: "#fef3c7",
-            borderBottom: "2px solid #f59e0b",
             cursor: "pointer",
             borderRadius: "2px",
             padding: "1px 2px",
@@ -382,7 +397,16 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
     console.log("Approving suggestion:", suggestion.id);
     // Apply the text change
     if (viewRef.current) {
-      const { start, end } = { start: suggestion.currentStart, end: suggestion.currentEnd };
+      // Get the current positions through all changes
+      const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+
+      // Validate that the range is within document bounds
+      const docLength = viewRef.current.state.doc.length;
+      if (start >= docLength || end > docLength || start >= end) {
+        console.error("Invalid range for suggestion:", { start, end, docLength, suggestionId: suggestion.id });
+        return;
+      }
+
       const transaction = viewRef.current.state.update({
         changes: {
           from: start,
@@ -417,8 +441,20 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
     console.log("Rejecting suggestion:", suggestion.id);
     // Add reject action to history (no text change, just record the action)
     // Create a proper ChangeDesc for reject since there's no actual text change
-    const dummyChange = ChangeDesc.create(suggestion.currentStart, suggestion.currentEnd, '');
-    addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
+    if (viewRef.current) {
+      // Get the current positions through all changes
+      const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+
+      // Validate that the range is within document bounds
+      const docLength = viewRef.current.state.doc.length;
+      if (start >= docLength || end > docLength || start >= end) {
+        console.error("Invalid range for suggestion:", { start, end, docLength, suggestionId: suggestion.id });
+        return;
+      }
+
+      const dummyChange = ChangeDesc.create(start, end, '');
+      addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
+    }
 
     // Mark suggestion as rejected (this will remove the highlight)
     setAnchoredSuggestions(prev =>
@@ -433,9 +469,9 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex flex-col bg-gray-50">
       {/* Main Editor Area - Centered A4 Paper Style */}
-      <div className="flex-1 flex justify-center p-6">
+      <div className="flex justify-center p-6">
         <div className="w-full max-w-4xl">
           {/* Toolbar */}
           <div className="bg-white border border-gray-200 rounded-t-lg p-3 shadow-sm">
@@ -467,7 +503,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           </div>
 
           {/* A4 Paper-like Editor */}
-          <div className="bg-white border border-gray-200 rounded-b-lg shadow-lg min-h-[calc(100vh-200px)]">
+          <div className="bg-white border border-gray-200 rounded-b-lg shadow-lg relative">
             <div ref={containerRef} className="p-8" style={{
               minHeight: '297mm', // A4 height
               maxWidth: '210mm',  // A4 width
@@ -475,69 +511,76 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
               backgroundColor: 'white',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }} />
+
+            {/* Highlights Sidebar - Positioned relative to A4 editor */}
+            <HighlightsSidebar
+              highlights={anchoredSuggestions.filter(s => s.status === 'open').map(s => ({
+                id: s.id,
+                originalText: s.originalText,
+                editedText: s.editedText,
+                note: s.note,
+                start: s.currentStart,
+                end: s.currentEnd
+              }))}
+              focusedHighlightId={focusedHighlightId}
+              onHighlightClick={(highlight) => {
+                // Find the suggestion in anchoredSuggestions
+                const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
+                if (suggestion && viewRef.current) {
+                  // Use the current positions directly (these are already updated after changes)
+                  const start = suggestion.currentStart;
+                  const end = suggestion.currentEnd;
+
+                  // Set cursor position at the start of the highlight
+                  viewRef.current.dispatch({
+                    selection: { anchor: start, head: start }
+                  });
+
+                  // Force a layout update
+                  viewRef.current.requestMeasure();
+
+                  // More reliable scrolling - scroll to the position
+                  setTimeout(() => {
+                    if (viewRef.current) {
+                      // Get the DOM element for the highlight
+                      const highlightElement = document.querySelector(`[data-suggestion-id="${highlight.id}"]`);
+                      if (highlightElement) {
+                        // Scroll the highlight into view
+                        highlightElement.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'center',
+                          inline: 'center'
+                        });
+
+                        // Add visual focus effect
+                        highlightElement.classList.add('highlight-focus');
+                        setTimeout(() => {
+                          highlightElement.classList.remove('highlight-focus');
+                        }, 5000);
+                      }
+                    }
+                  }, 100);
+                }
+              }}
+              onApprove={(highlight) => {
+                const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
+                if (suggestion) {
+                  handleApprove(suggestion);
+                }
+              }}
+              onReject={(highlight) => {
+                const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
+                if (suggestion) {
+                  handleReject(suggestion);
+                }
+              }}
+              isVisible={anchoredSuggestions.filter(s => s.status === 'open').length > 0}
+            />
           </div>
         </div>
       </div>
 
-      {/* Suggestion Popup */}
-      {popup && (
-        <div
-          ref={popupRef}
-          style={{
-            position: "fixed",
-            top: popup.rect.bottom + 8,
-            left: Math.min(popup.rect.left, window.innerWidth - 320),
-            width: 300,
-            zIndex: 50,
-            backgroundColor: "#fed7aa", // Light orange background
-            border: "1px solid #fdba74", // Orange border
-            borderRadius: "8px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            padding: "16px"
-          }}
-          className="suggestion-popup"
-        >
-          <div className="space-y-3 mb-4">
-            <div>
-              <div className="text-xs text-orange-800 mb-1 font-medium">Edit:</div>
-              <div className="bg-green-100 border border-green-300 p-2 rounded text-sm font-mono text-green-800">
-                {popup.suggestion.editedText}
-              </div>
-            </div>
 
-            {popup.suggestion.note && (
-              <div>
-                <div className="text-xs text-orange-800 mb-1 font-medium">Comment:</div>
-                <div className="text-sm text-gray-800 bg-white border border-orange-200 p-2 rounded">
-                  {popup.suggestion.note}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleApprove(popup.suggestion)}
-              className="flex-1 px-3 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors"
-            >
-              Approve
-            </button>
-            <button
-              onClick={() => handleReject(popup.suggestion)}
-              className="flex-1 px-3 py-2 rounded bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
-            >
-              Reject
-            </button>
-          </div>
-
-          <button
-            onClick={() => setPopup(null)}
-            className="absolute top-2 right-2 text-orange-600 hover:text-orange-800 transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-      )}
     </div>
   );
 }
