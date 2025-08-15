@@ -44,6 +44,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   const [anchoredSuggestions, setAnchoredSuggestions] = useState<AnchoredSuggestion[]>([]);
   const [currentEssayText, setCurrentEssayText] = useState(essay.text);
   const changeHistoryRef = useRef<ChangeDesc[]>([]);
+  const [focusedHighlightId, setFocusedHighlightId] = useState<string | null>(null);
 
   // Google Docs-style history: track actual changes, not text snapshots
   const [changeHistory, setChangeHistory] = useState<Array<{
@@ -247,10 +248,11 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
       // Map the current positions through this change
       start = change.mapPos(start);
       end = change.mapPos(end);
-
-      // Note: change.mapPos already handles the insertion correctly
-      // We don't need to manually expand the end position
     }
+
+    // Ensure positions are valid
+    start = Math.max(0, start);
+    end = Math.max(start, end);
 
     return { start, end };
   };
@@ -316,8 +318,13 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
               if (suggestionId) {
                 const suggestion = anchoredSuggestions.find(s => s.id === suggestionId);
                 if (suggestion) {
-                  const rect = target.getBoundingClientRect();
-                  setPopup({ suggestion, rect });
+                  // Set the focused highlight ID to trigger sidebar scrolling
+                  setFocusedHighlightId(suggestionId);
+
+                  // Clear the focus after a delay
+                  setTimeout(() => {
+                    setFocusedHighlightId(null);
+                  }, 5000);
                 }
               }
             }
@@ -384,7 +391,16 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
     console.log("Approving suggestion:", suggestion.id);
     // Apply the text change
     if (viewRef.current) {
-      const { start, end } = { start: suggestion.currentStart, end: suggestion.currentEnd };
+      // Get the current positions through all changes
+      const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+
+      // Validate that the range is within document bounds
+      const docLength = viewRef.current.state.doc.length;
+      if (start >= docLength || end > docLength || start >= end) {
+        console.error("Invalid range for suggestion:", { start, end, docLength, suggestionId: suggestion.id });
+        return;
+      }
+
       const transaction = viewRef.current.state.update({
         changes: {
           from: start,
@@ -419,8 +435,20 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
     console.log("Rejecting suggestion:", suggestion.id);
     // Add reject action to history (no text change, just record the action)
     // Create a proper ChangeDesc for reject since there's no actual text change
-    const dummyChange = ChangeDesc.create(suggestion.currentStart, suggestion.currentEnd, '');
-    addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
+    if (viewRef.current) {
+      // Get the current positions through all changes
+      const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+
+      // Validate that the range is within document bounds
+      const docLength = viewRef.current.state.doc.length;
+      if (start >= docLength || end > docLength || start >= end) {
+        console.error("Invalid range for suggestion:", { start, end, docLength, suggestionId: suggestion.id });
+        return;
+      }
+
+      const dummyChange = ChangeDesc.create(start, end, '');
+      addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
+    }
 
     // Mark suggestion as rejected (this will remove the highlight)
     setAnchoredSuggestions(prev =>
@@ -481,69 +509,6 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
         </div>
       </div>
 
-      {/* Suggestion Popup */}
-      {popup && (
-        <div
-          ref={popupRef}
-          style={{
-            position: "fixed",
-            top: "50%",
-            right: "20px",
-            transform: "translateY(-50%)",
-            width: 300,
-            zIndex: 50,
-            backgroundColor: "rgba(255, 247, 237, 0.95)", // Very light, almost translucent orange
-            border: "1px solid rgba(254, 215, 170, 0.6)", // Light, translucent orange border
-            borderRadius: "8px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            padding: "16px",
-            backdropFilter: "blur(8px)", // Adds a subtle blur effect for more translucency
-          }}
-          className="suggestion-popup"
-        >
-          {/* Mac OS-style close button */}
-          <button
-            onClick={() => setPopup(null)}
-            className="absolute top-3 right-3 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-          >
-            <span className="text-white text-sm font-medium">✕</span>
-          </button>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <div className="text-sm font-medium text-gray-700 mb-2">Edit:</div>
-              <div className="text-sm text-gray-900 bg-white border border-gray-200 rounded p-3 font-mono">
-                {popup.suggestion.editedText}
-              </div>
-            </div>
-
-            {popup.suggestion.note && (
-              <div>
-                <div className="text-sm font-medium text-gray-700 mb-2">Comment:</div>
-                <div className="text-sm text-gray-900 bg-white border border-gray-200 rounded p-3">
-                  {popup.suggestion.note}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleApprove(popup.suggestion)}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-            >
-              Approve
-            </button>
-            <button
-              onClick={() => handleReject(popup.suggestion)}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-            >
-              Reject
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Highlights Sidebar - Google Docs style */}
       <div className="relative">
         <HighlightsSidebar
@@ -555,6 +520,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
             start: s.currentStart,
             end: s.currentEnd
           }))}
+          focusedHighlightId={focusedHighlightId}
           onHighlightClick={(highlight) => {
             // Find the suggestion in anchoredSuggestions
             const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
@@ -588,10 +554,22 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
                     highlightElement.classList.add('highlight-focus');
                     setTimeout(() => {
                       highlightElement.classList.remove('highlight-focus');
-                    }, 2000);
+                    }, 5000);
                   }
                 }
               }, 100);
+            }
+          }}
+          onApprove={(highlight) => {
+            const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
+            if (suggestion) {
+              handleApprove(suggestion);
+            }
+          }}
+          onReject={(highlight) => {
+            const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
+            if (suggestion) {
+              handleReject(suggestion);
             }
           }}
           isVisible={anchoredSuggestions.filter(s => s.status === 'open').length > 0}

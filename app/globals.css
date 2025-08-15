@@ -207,3 +207,22 @@
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.8);
   }
 }
+
+/* Sidebar card focus effect */
+.sidebar-card-focus {
+  animation: sidebarCardPulse 5s ease-in-out;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6);
+  border-color: rgba(59, 130, 246, 0.8);
+}
+
+@keyframes sidebarCardPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6);
+    border-color: rgba(59, 130, 246, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.9);
+    border-color: rgba(59, 130, 246, 1);
+  }
+}
