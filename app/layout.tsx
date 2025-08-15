@@ -7,11 +7,15 @@ export const metadata: Metadata = {
   description: "AI-powered essay editing with suggestions",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html>
-      <body>
-        <Header />  {/* ← Shows on ALL pages */}
+    <html lang="en">
+      <body className="antialiased">
+        <Header />
         {children}
       </body>
     </html>

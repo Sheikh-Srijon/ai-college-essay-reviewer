@@ -348,7 +348,8 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           },
           ".cm-content": {
             lineHeight: "1.6",
-            padding: "0"
+            padding: "0",
+            textAlign: "justify"
           },
           ".suggestion-highlight": {
             backgroundColor: "#fef3c7",
