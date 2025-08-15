@@ -8,7 +8,8 @@ import {
   computeSuggestionPositions,
   handleTextChange
 } from './suggestionPositionManager';
-import { getMockEssay, getMockRawSuggestions } from './mockDataAdvanced';
+// import { getMockEssay, getMockRawSuggestions } from './mockDataAdvanced';
+import { getMockEssay, getMockRawSuggestions } from './mockData';
 
 interface EditorProps {
   essayId: string;

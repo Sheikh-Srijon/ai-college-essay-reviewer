@@ -8,7 +8,8 @@ import type { Essay } from "@/public/mockData";
 import type { RawSuggestion } from "@/public/suggestionPositionManager";
 import {
   SuggestionWithPosition,
-  computeSuggestionPositions
+  computeSuggestionPositions,
+  handleTextChange
 } from "@/public/suggestionPositionManager";
 // import type { Essay, Suggestion } from "@/public/mockDataAdvanced";
 
@@ -18,11 +19,16 @@ type Props = {
 };
 
 interface PopupState {
-  suggestion: SuggestionWithPosition;
+  suggestion: AnchoredSuggestion;
   rect: DOMRect;
 }
 
-interface AnchoredSuggestion extends SuggestionWithPosition {
+interface AnchoredSuggestion {
+  id: string;
+  originalText: string;
+  editedText: string;
+  note?: string;
+  status: 'open' | 'approved' | 'rejected' | 'stale';
   originalStart: number;
   originalEnd: number;
   currentStart: number;
@@ -85,7 +91,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   // Initialize anchored suggestions with original positions
   useEffect(() => {
     // Compute positions from raw suggestions
-    const positionedSuggestions = computeSuggestionPositions(rawSuggestions, currentEssayText);
+    const positionedSuggestions = computeSuggestionPositions(rawSuggestions, essay.text);
 
     const anchored = positionedSuggestions.map(suggestion => ({
       ...suggestion,
@@ -96,20 +102,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
     }));
     setAnchoredSuggestions(anchored);
     changeHistoryRef.current = []; // Reset change history
-
-    // Debug: Log positions to verify they're correct
-    console.log("Essay text:", JSON.stringify(currentEssayText));
-    positionedSuggestions.forEach(suggestion => {
-      if (suggestion.anchor.start >= 0) {
-        const textAtPosition = currentEssayText.slice(suggestion.anchor.start, suggestion.anchor.end);
-        console.log(`Suggestion ${suggestion.id}: "${textAtPosition}" at [${suggestion.anchor.start}, ${suggestion.anchor.end}]`);
-        console.log(`Expected: "${suggestion.originalText}"`);
-        console.log(`Match: ${textAtPosition === suggestion.originalText ? '✓' : '✗'}`);
-      } else {
-        console.log(`Suggestion ${suggestion.id}: STALE - text not found`);
-      }
-    });
-  }, [rawSuggestions, currentEssayText]);
+  }, [rawSuggestions, essay.text]);
 
   // Function to add change to history
   const addToChangeHistory = (type: 'approve' | 'reject', suggestionId: string, change: ChangeDesc, suggestionStatus: 'open' | 'approved' | 'rejected') => {
@@ -133,19 +126,40 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
       console.log('Undoing change:', lastChange);
 
       if (lastChange.type === 'approve') {
-        // Reverse the text change
-        if (viewRef.current) {
-          // For approve, we need to reverse the text change
-          // This is complex - we'd need to store the original text positions
-          // For now, let's just restore the suggestion status
-          setAnchoredSuggestions(prev =>
-            prev.map(s =>
-              s.id === lastChange.suggestionId
-                ? { ...s, status: 'open' as const }
-                : s
-            )
-          );
+        // Find the suggestion that was approved
+        const suggestion = anchoredSuggestions.find(s => s.id === lastChange.suggestionId);
+        if (suggestion) {
+          // Reverse the text change by replacing the edited text with the original text
+          const newText =
+            currentEssayText.slice(0, suggestion.currentStart) +
+            suggestion.originalText +
+            currentEssayText.slice(suggestion.currentStart + suggestion.editedText.length);
+
+          // Update the CodeMirror editor first
+          if (viewRef.current) {
+            const transaction = viewRef.current.state.update({
+              changes: {
+                from: suggestion.currentStart,
+                to: suggestion.currentStart + suggestion.editedText.length,
+                insert: suggestion.originalText
+              }
+            });
+            viewRef.current.dispatch(transaction);
+
+            // Update the current essay text to match what's actually in CodeMirror
+            const actualNewText = viewRef.current.state.doc.toString();
+            setCurrentEssayText(actualNewText);
+          }
         }
+
+        // Restore suggestion status
+        setAnchoredSuggestions(prev =>
+          prev.map(s =>
+            s.id === lastChange.suggestionId
+              ? { ...s, status: 'open' as const }
+              : s
+          )
+        );
       } else if (lastChange.type === 'reject') {
         // For reject, just restore the suggestion status
         setAnchoredSuggestions(prev =>
@@ -170,7 +184,33 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
       console.log('Redoing change:', nextChange);
 
       if (nextChange.type === 'approve') {
-        // Re-apply the text change
+        // Find the suggestion that was approved
+        const suggestion = anchoredSuggestions.find(s => s.id === nextChange.suggestionId);
+        if (suggestion) {
+          // Re-apply the text change
+          const newText =
+            currentEssayText.slice(0, suggestion.currentStart) +
+            suggestion.editedText +
+            currentEssayText.slice(suggestion.currentStart + suggestion.originalText.length);
+
+          // Update the CodeMirror editor first
+          if (viewRef.current) {
+            const transaction = viewRef.current.state.update({
+              changes: {
+                from: suggestion.currentStart,
+                to: suggestion.currentStart + suggestion.originalText.length,
+                insert: suggestion.editedText
+              }
+            });
+            viewRef.current.dispatch(transaction);
+
+            // Update the current essay text to match what's actually in CodeMirror
+            const actualNewText = viewRef.current.state.doc.toString();
+            setCurrentEssayText(actualNewText);
+          }
+        }
+
+        // Re-apply the approval status
         setAnchoredSuggestions(prev =>
           prev.map(s =>
             s.id === nextChange.suggestionId
@@ -227,8 +267,6 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           if (update.docChanged) {
             // Add the new change to our history
             changeHistoryRef.current.push(update.changes);
-
-            // Rebuild decorations
             this.decorations = this.buildDecorations(update.view);
           } else if (update.viewportChanged) {
             this.decorations = this.buildDecorations(update.view);
@@ -238,9 +276,8 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
         buildDecorations(view: EditorView): DecorationSet {
           const openSuggestions = anchoredSuggestions.filter(s => s.status === 'open');
           const decorations = openSuggestions.map((suggestion) => {
-            // Use current positions from anchored suggestions
-            const start = suggestion.currentStart;
-            const end = suggestion.currentEnd;
+            // Calculate current positions through all changes
+            const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
 
             // Ensure ranges are within document bounds
             const boundedStart = Math.max(0, Math.min(start, view.state.doc.length));
@@ -357,14 +394,11 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
 
       // Add to change history
       addToChangeHistory('approve', suggestion.id, transaction.changes, 'approved');
-    }
 
-    // Update the current essay text to reflect the change
-    const newText =
-      currentEssayText.slice(0, suggestion.currentStart) +
-      suggestion.editedText +
-      currentEssayText.slice(suggestion.currentEnd);
-    setCurrentEssayText(newText);
+      // Update the current essay text to match what's actually in CodeMirror
+      const newText = viewRef.current.state.doc.toString();
+      setCurrentEssayText(newText);
+    }
 
     // Mark suggestion as approved (this will remove the highlight)
     setAnchoredSuggestions(prev =>

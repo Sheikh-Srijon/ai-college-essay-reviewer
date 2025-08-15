@@ -1,6 +1,6 @@
 import { EditorClient } from "./EditorClient";
-import { getMockEssay, getMockRawSuggestions } from "@/public/mockDataAdvanced";
-// import { getMockEssay, getMockRawSuggestions } from "@/public/mockData";
+import { getMockEssay, getMockRawSuggestions } from "@/public/mockData";
+// import { getMockEssay, getMockRawSuggestions } from "@/public/mockDataAdvanced";
 
 import "../../../styles/suggestions.css";
 
