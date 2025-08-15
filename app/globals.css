@@ -120,3 +120,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom essay card styles */
+.essay-card {
+  @apply relative overflow-hidden transition-all duration-500 ease-in-out cursor-pointer rounded-xl bg-white;
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.15), 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(147, 51, 234, 0.2) !important;
+  min-height: 200px;
+}
+
+/* Debug: Make it very obvious if the class is working */
+.essay-card {
+  background-color: #fefefe !important;
+  border: 3px solid purple !important;
+}
+
+.essay-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom right,
+    rgba(250, 245, 255, 0.4),
+    transparent,
+    rgba(243, 232, 255, 0.3)
+  );
+  border-radius: 0.75rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.essay-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, transparent, rgba(196, 181, 253, 0.15), transparent);
+  opacity: 0.7;
+  animation: pulse 3s ease-in-out infinite;
+  border-radius: 0.75rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
