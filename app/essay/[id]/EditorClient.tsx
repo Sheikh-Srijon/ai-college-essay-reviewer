@@ -580,76 +580,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
         </div>
       </div>
 
-      {/* Highlights Sidebar - COMMENTED OUT - Moved inside A4 editor container */}
-      {/*
-      <div className="relative flex justify-center">
-        <div className="relative w-full max-w-4xl">
-          <HighlightsSidebar
-            highlights={anchoredSuggestions.filter(s => s.status === 'open').map(s => ({
-              id: s.id,
-              originalText: s.originalText,
-              editedText: s.editedText,
-              note: s.note,
-              start: s.currentStart,
-              end: s.currentEnd
-            }))}
-            focusedHighlightId={focusedHighlightId}
-            onHighlightClick={(highlight) => {
-              // Find the suggestion in anchoredSuggestions
-              const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
-              if (suggestion && viewRef.current) {
-                // Use the current positions directly (these are already updated after changes)
-                const start = suggestion.currentStart;
-                const end = suggestion.currentEnd;
-                
-                // Set cursor position at the start of the highlight
-                viewRef.current.dispatch({
-                  selection: { anchor: start, head: start }
-                });
-                
-                // Force a layout update
-                viewRef.current.requestMeasure();
-                
-                // More reliable scrolling - scroll to the position
-                setTimeout(() => {
-                  if (viewRef.current) {
-                    // Get the DOM element for the highlight
-                    const highlightElement = document.querySelector(`[data-suggestion-id="${highlight.id}"]`);
-                    if (highlightElement) {
-                      // Scroll the highlight into view
-                      highlightElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center'
-                      });
-                      
-                      // Add visual focus effect
-                      highlightElement.classList.add('highlight-focus');
-                      setTimeout(() => {
-                        highlightElement.classList.remove('highlight-focus');
-                      }, 5000);
-                    }
-                  }
-                }, 100);
-              }
-            }}
-            onApprove={(highlight) => {
-              const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
-              if (suggestion) {
-                handleApprove(suggestion);
-              }
-            }}
-            onReject={(highlight) => {
-              const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
-              if (suggestion) {
-                handleReject(suggestion);
-              }
-            }}
-            isVisible={anchoredSuggestions.filter(s => s.status === 'open').length > 0}
-          />
-        </div>
-      </div>
-      */}
+
     </div>
   );
 }

@@ -27,6 +27,8 @@ export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onR
 
   // Calculate sidebar position to stay above editor bottom
   useEffect(() => {
+    let ticking = false;
+
     const updateSidebarPosition = () => {
       if (sidebarRef.current) {
         const editorContainer = document.querySelector('.bg-white.border.border-gray-200.rounded-b-lg.shadow-lg.relative');
@@ -60,20 +62,32 @@ export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onR
           // Final safety check: ensure we're not positioning below the editor content
           const finalSafeTop = Math.min(viewportSafeTop, actualEditorBottom - sidebarHeight - 20);
 
-          setSidebarTop(finalSafeTop);
+          // Only update if position changed significantly (prevents micro-jitters)
+          const currentTop = parseInt(sidebarRef.current.style.top) || 0;
+          if (Math.abs(finalSafeTop - currentTop) > 2) { // 2px threshold
+            setSidebarTop(finalSafeTop);
+          }
         }
+      }
+      ticking = false;
+    };
+
+    const throttledUpdate = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateSidebarPosition);
+        ticking = true;
       }
     };
 
     // Initial position calculation with delay to ensure editor is rendered
     const initialTimer = setTimeout(updateSidebarPosition, 100);
 
-    // Update position on scroll and resize - more frequent updates for smooth positioning
-    window.addEventListener('scroll', updateSidebarPosition, { passive: true });
-    window.addEventListener('resize', updateSidebarPosition, { passive: true });
+    // Throttled scroll updates using requestAnimationFrame
+    window.addEventListener('scroll', throttledUpdate, { passive: true });
+    window.addEventListener('resize', throttledUpdate, { passive: true });
 
     // Also update on any DOM changes that might affect editor position
-    const observer = new ResizeObserver(updateSidebarPosition);
+    const observer = new ResizeObserver(throttledUpdate);
     const editorContainer = document.querySelector('.bg-white.border.border-gray-200.rounded-b-lg.shadow-lg.relative');
     if (editorContainer) {
       observer.observe(editorContainer);
@@ -81,8 +95,8 @@ export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onR
 
     return () => {
       clearTimeout(initialTimer);
-      window.removeEventListener('scroll', updateSidebarPosition);
-      window.removeEventListener('resize', updateSidebarPosition);
+      window.removeEventListener('scroll', throttledUpdate);
+      window.removeEventListener('resize', throttledUpdate);
       observer.disconnect();
     };
   }, []);
@@ -125,7 +139,7 @@ export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onR
   return (
     <div
       ref={sidebarRef}
-      className="fixed w-80 max-h-[80vh] overflow-y-auto bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg z-40"
+      className="fixed w-80 max-h-[80vh] overflow-y-auto bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg z-40 transition-all duration-300 ease-out"
       style={{
         left: 'calc(50% + 210mm/2 + 16px)', // Position to the right of A4 editor (210mm width)
         top: `${sidebarTop}px`
