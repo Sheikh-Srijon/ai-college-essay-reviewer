@@ -31,6 +31,15 @@ export function EditorClient({ essay, suggestions }: Props) {
   const [anchoredSuggestions, setAnchoredSuggestions] = useState<AnchoredSuggestion[]>([]);
   const changeHistoryRef = useRef<ChangeDesc[]>([]);
 
+  // Google Docs-style history: track actual changes, not text snapshots
+  const [changeHistory, setChangeHistory] = useState<Array<{
+    type: 'approve' | 'reject';
+    suggestionId: string;
+    change: ChangeDesc;
+    suggestionStatus: 'open' | 'approved' | 'rejected';
+  }>>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1); // -1 means no actions yet
+
   // Handle click outside popup
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,6 +57,24 @@ export function EditorClient({ essay, suggestions }: Props) {
     };
   }, [popup]);
 
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        event.preventDefault();
+        handleUndo();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [historyIndex, changeHistory.length]);
+
   // Initialize anchored suggestions with original positions
   useEffect(() => {
     const anchored = suggestions.map(suggestion => ({
@@ -59,7 +86,100 @@ export function EditorClient({ essay, suggestions }: Props) {
     }));
     setAnchoredSuggestions(anchored);
     changeHistoryRef.current = []; // Reset change history
-  }, [suggestions]);
+
+    // Debug: Log positions to verify they're correct
+    console.log("Essay text:", JSON.stringify(essay.text));
+    suggestions.forEach(suggestion => {
+      const textAtPosition = essay.text.slice(suggestion.anchor.start, suggestion.anchor.end);
+      console.log(`Suggestion ${suggestion.id}: "${textAtPosition}" at [${suggestion.anchor.start}, ${suggestion.anchor.end}]`);
+      console.log(`Expected: "${suggestion.originalText}"`);
+      console.log(`Match: ${textAtPosition === suggestion.originalText ? '✓' : '✗'}`);
+    });
+  }, [suggestions, essay.text]);
+
+  // Function to add change to history
+  const addToChangeHistory = (type: 'approve' | 'reject', suggestionId: string, change: ChangeDesc, suggestionStatus: 'open' | 'approved' | 'rejected') => {
+    // Remove any future history if we're not at the end
+    const newHistory = changeHistory.slice(0, historyIndex + 1);
+
+    // Add the new change
+    newHistory.push({ type, suggestionId, change, suggestionStatus });
+
+    setChangeHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+
+    console.log('Added to change history:', { type, suggestionId, suggestionStatus });
+    console.log('New history index:', newHistory.length - 1);
+  };
+
+  // Function to undo (Google Docs style)
+  const handleUndo = () => {
+    if (historyIndex >= 0) {
+      const lastChange = changeHistory[historyIndex];
+      console.log('Undoing change:', lastChange);
+
+      if (lastChange.type === 'approve') {
+        // Reverse the text change
+        if (viewRef.current) {
+          // For approve, we need to reverse the text change
+          // This is complex - we'd need to store the original text positions
+          // For now, let's just restore the suggestion status
+          setAnchoredSuggestions(prev =>
+            prev.map(s =>
+              s.id === lastChange.suggestionId
+                ? { ...s, status: 'open' as const }
+                : s
+            )
+          );
+        }
+      } else if (lastChange.type === 'reject') {
+        // For reject, just restore the suggestion status
+        setAnchoredSuggestions(prev =>
+          prev.map(s =>
+            s.id === lastChange.suggestionId
+              ? { ...s, status: 'open' as const }
+              : s
+          )
+        );
+      }
+
+      // Move back in history
+      setHistoryIndex(historyIndex - 1);
+      console.log('New history index after undo:', historyIndex - 1);
+    }
+  };
+
+  // Function to redo
+  const handleRedo = () => {
+    if (historyIndex < changeHistory.length - 1) {
+      const nextChange = changeHistory[historyIndex + 1];
+      console.log('Redoing change:', nextChange);
+
+      if (nextChange.type === 'approve') {
+        // Re-apply the text change
+        setAnchoredSuggestions(prev =>
+          prev.map(s =>
+            s.id === nextChange.suggestionId
+              ? { ...s, status: 'approved' as const }
+              : s
+          )
+        );
+      } else if (nextChange.type === 'reject') {
+        // Re-apply the reject
+        setAnchoredSuggestions(prev =>
+          prev.map(s =>
+            s.id === nextChange.suggestionId
+              ? { ...s, status: 'rejected' as const }
+              : s
+          )
+        );
+      }
+
+      // Move forward in history
+      setHistoryIndex(historyIndex + 1);
+      console.log('New history index after redo:', historyIndex + 1);
+    }
+  };
 
   // Function to map original positions through all accumulated changes
   const mapPositionsThroughHistory = (originalStart: number, originalEnd: number): { start: number; end: number } => {
@@ -206,13 +326,51 @@ export function EditorClient({ essay, suggestions }: Props) {
 
   const handleApprove = (suggestion: AnchoredSuggestion) => {
     console.log("Approving suggestion:", suggestion.id);
-    // TODO: Implement approval logic
+    // Apply the text change
+    if (viewRef.current) {
+      const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+      const transaction = viewRef.current.state.update({
+        changes: {
+          from: start,
+          to: end,
+          insert: suggestion.editedText
+        }
+      });
+      viewRef.current.dispatch(transaction);
+
+      // Add to change history
+      addToChangeHistory('approve', suggestion.id, transaction.changes, 'approved');
+    }
+
+    // Mark suggestion as approved (this will remove the highlight)
+    setAnchoredSuggestions(prev =>
+      prev.map(s =>
+        s.id === suggestion.id
+          ? { ...s, status: 'approved' as const }
+          : s
+      )
+    );
+
+    // Close popup
     setPopup(null);
   };
 
   const handleReject = (suggestion: AnchoredSuggestion) => {
     console.log("Rejecting suggestion:", suggestion.id);
-    // TODO: Implement rejection logic
+    // Add reject action to history (no text change, just record the action)
+    // Create a proper ChangeDesc for reject since there's no actual text change
+    const dummyChange = ChangeDesc.create(suggestion.originalStart, suggestion.originalEnd, '');
+    addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
+
+    // Mark suggestion as rejected (this will remove the highlight)
+    setAnchoredSuggestions(prev =>
+      prev.map(s =>
+        s.id === suggestion.id
+          ? { ...s, status: 'rejected' as const }
+          : s
+      )
+    );
+
     setPopup(null);
   };
 
@@ -224,12 +382,29 @@ export function EditorClient({ essay, suggestions }: Props) {
           {/* Toolbar */}
           <div className="bg-white border border-gray-200 rounded-t-lg p-3 shadow-sm">
             <div className="flex items-center gap-2">
-              <button className="px-3 py-1.5 rounded-md bg-gray-900 text-white text-sm hover:bg-gray-800">
+              <button
+                onClick={handleUndo}
+                disabled={historyIndex === -1}
+                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${historyIndex === -1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-900 text-white hover:bg-gray-800'
+                  }`}
+              >
                 Undo
               </button>
-              <button className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-900 text-sm hover:bg-gray-300">
+              <button
+                onClick={handleRedo}
+                disabled={historyIndex === changeHistory.length - 1}
+                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${historyIndex === changeHistory.length - 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                  }`}
+              >
                 Redo
               </button>
+              <span className="text-xs text-gray-500 ml-2">
+                {changeHistory.length > 0 ? `History: ${historyIndex + 1}/${changeHistory.length}` : 'No actions yet'}
+              </span>
             </div>
           </div>
 

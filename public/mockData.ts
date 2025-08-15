@@ -41,7 +41,10 @@ I believe in continuous learning and improvement.`,
 export const mockSuggestions: Suggestion[] = [
   {
     id: "s1",
-    anchor: { start: 25, end: 33, stickiness: "join_left" },
+    anchor: {
+      start: mockEssay.text.indexOf("writting"),
+      end: mockEssay.text.indexOf("writting") + "writting".length,
+    },
     originalText: "writting",
     editedText: "writing",
     note: "Spelling correction",
@@ -49,7 +52,10 @@ export const mockSuggestions: Suggestion[] = [
   },
   {
     id: "s2",
-    anchor: { start: 67, end: 75, stickiness: "join_left" },
+    anchor: {
+      start: mockEssay.text.indexOf("grammar"),
+      end: mockEssay.text.indexOf("grammar") + "grammar".length,
+    },
     originalText: "grammar",
     editedText: "grammar",
     note: "This word is spelled correctly",
@@ -57,7 +63,10 @@ export const mockSuggestions: Suggestion[] = [
   },
   {
     id: "s3",
-    anchor: { start: 120, end: 131, stickiness: "join_left" },
+    anchor: {
+      start: mockEssay.text.indexOf("fascenating"),
+      end: mockEssay.text.indexOf("fascenating") + "fascenating".length,
+    },
     originalText: "fascenating",
     editedText: "fascinating",
     note: "Spelling correction",
@@ -65,7 +74,10 @@ export const mockSuggestions: Suggestion[] = [
   },
   {
     id: "s4",
-    anchor: { start: 180, end: 190, stickiness: "join_left" },
+    anchor: {
+      start: mockEssay.text.indexOf("engineer"),
+      end: mockEssay.text.indexOf("engineer") + "engineer".length,
+    },
     originalText: "engineer",
     editedText: "engineer",
     note: "This word is spelled correctly",
@@ -79,4 +91,20 @@ export function getMockEssay(id: string): Essay {
 
 export function getMockSuggestions(): Suggestion[] {
   return [...mockSuggestions];
+}
+
+// Helper function to verify positions (for debugging)
+export function verifyPositions() {
+  const text = mockEssay.text;
+  console.log("Essay text:", JSON.stringify(text));
+
+  mockSuggestions.forEach((suggestion) => {
+    const textAtPosition = text.slice(suggestion.anchor.start, suggestion.anchor.end);
+    console.log(
+      `Suggestion ${suggestion.id}: "${textAtPosition}" at [${suggestion.anchor.start}, ${suggestion.anchor.end}]`
+    );
+    console.log(`Expected: "${suggestion.originalText}"`);
+    console.log(`Match: ${textAtPosition === suggestion.originalText ? "✓" : "✗"}`);
+    console.log("---");
+  });
 }
