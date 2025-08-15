@@ -1,0 +1,43 @@
+/* Base CM styles should already exist; add our highlight classes */
+.cm-content .sug-open {
+  background: rgba(255, 214, 102, 0.45); /* soft yellow */
+  border-bottom: 1px solid rgba(255, 170, 0, 0.8);
+  border-radius: 2px;
+}
+
+/* Suggestion popup styling */
+.suggestion-popup {
+  background-color: #fed7aa !important; /* Light orange background */
+  border: 1px solid #fdba74 !important; /* Orange border */
+  border-radius: 8px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  padding: 16px !important;
+}
+
+.suggestion-popup .text-orange-800 {
+  color: #9a3412 !important; /* Dark orange text */
+}
+
+.suggestion-popup .bg-green-100 {
+  background-color: #dcfce7 !important; /* Light green background */
+}
+
+.suggestion-popup .border-green-300 {
+  border-color: #86efac !important; /* Green border */
+}
+
+.suggestion-popup .text-green-800 {
+  color: #166534 !important; /* Dark green text */
+}
+
+.suggestion-popup .bg-white {
+  background-color: #ffffff !important; /* White background */
+}
+
+.suggestion-popup .border-orange-200 {
+  border-color: #fed7aa !important; /* Light orange border */
+}
+
+.suggestion-popup .text-gray-800 {
+  color: #1f2937 !important; /* Dark gray text */
+}
