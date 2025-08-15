@@ -486,8 +486,9 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           ref={popupRef}
           style={{
             position: "fixed",
-            top: popup.rect.bottom + 8,
-            left: Math.min(popup.rect.left, window.innerWidth - 320),
+            top: "50%",
+            right: "20px",
+            transform: "translateY(-50%)",
             width: 300,
             zIndex: 50,
             backgroundColor: "#fed7aa", // Light orange background
