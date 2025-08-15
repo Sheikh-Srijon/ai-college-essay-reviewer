@@ -11,6 +11,7 @@ import {
   computeSuggestionPositions,
   handleTextChange
 } from "@/public/suggestionPositionManager";
+import { HighlightsSidebar } from "@/components/ui/highlights-sidebar";
 // import type { Essay, Suggestion } from "@/public/mockDataAdvanced";
 
 type Props = {
@@ -57,6 +58,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        // Temporarily remove the popup when clicking outside
         setPopup(null);
       }
     };
@@ -542,6 +544,30 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           </div>
         </div>
       )}
+
+      {/* Highlights Sidebar - Google Docs style */}
+      <HighlightsSidebar
+        highlights={anchoredSuggestions.filter(s => s.status === 'open').map(s => ({
+          id: s.id,
+          originalText: s.originalText,
+          editedText: s.editedText,
+          note: s.note,
+          start: s.currentStart,
+          end: s.currentEnd
+        }))}
+        onHighlightClick={(highlight) => {
+          // Focus on the highlight in the editor
+          if (viewRef.current) {
+            const { start } = highlight;
+            viewRef.current.dispatch({
+              selection: { anchor: start, head: start }
+            });
+            // Scroll to the position
+            viewRef.current.requestMeasure();
+          }
+        }}
+        isVisible={anchoredSuggestions.filter(s => s.status === 'open').length > 0}
+      />
     </div>
   );
 }
