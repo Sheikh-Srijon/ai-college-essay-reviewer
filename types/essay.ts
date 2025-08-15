@@ -46,12 +46,7 @@ export interface MetaEssayFeedback {
     strengths: string[];
     weaknesses: string[];
   };
-  structure: {
-    introduction: string;
-    body: string;
-    conclusion: string;
-    overall: string;
-  };
+  structure: string[]; // Array of paragraph comments
   themeStrategy: {
     mainTheme: string;
     strategy: string;
