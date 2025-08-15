@@ -1,34 +1,41 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { EditorState, ChangeDesc, Text } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { markdown } from "@codemirror/lang-markdown";
-import type { Essay, Suggestion } from "@/public/mockData";
+import type { Essay } from "@/public/mockData";
+import type { RawSuggestion } from "@/public/suggestionPositionManager";
+import {
+  SuggestionWithPosition,
+  computeSuggestionPositions
+} from "@/public/suggestionPositionManager";
+// import type { Essay, Suggestion } from "@/public/mockDataAdvanced";
 
 type Props = {
   essay: Essay;
-  suggestions: Suggestion[];
+  rawSuggestions: RawSuggestion[];
 };
 
 interface PopupState {
-  suggestion: Suggestion;
+  suggestion: SuggestionWithPosition;
   rect: DOMRect;
 }
 
-interface AnchoredSuggestion extends Suggestion {
+interface AnchoredSuggestion extends SuggestionWithPosition {
   originalStart: number;
   originalEnd: number;
   currentStart: number;
   currentEnd: number;
 }
 
-export function EditorClient({ essay, suggestions }: Props) {
+export function EditorClient({ essay, rawSuggestions }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [popup, setPopup] = useState<PopupState | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const [anchoredSuggestions, setAnchoredSuggestions] = useState<AnchoredSuggestion[]>([]);
+  const [currentEssayText, setCurrentEssayText] = useState(essay.text);
   const changeHistoryRef = useRef<ChangeDesc[]>([]);
 
   // Google Docs-style history: track actual changes, not text snapshots
@@ -77,7 +84,10 @@ export function EditorClient({ essay, suggestions }: Props) {
 
   // Initialize anchored suggestions with original positions
   useEffect(() => {
-    const anchored = suggestions.map(suggestion => ({
+    // Compute positions from raw suggestions
+    const positionedSuggestions = computeSuggestionPositions(rawSuggestions, currentEssayText);
+
+    const anchored = positionedSuggestions.map(suggestion => ({
       ...suggestion,
       originalStart: suggestion.anchor.start,
       originalEnd: suggestion.anchor.end,
@@ -88,14 +98,18 @@ export function EditorClient({ essay, suggestions }: Props) {
     changeHistoryRef.current = []; // Reset change history
 
     // Debug: Log positions to verify they're correct
-    console.log("Essay text:", JSON.stringify(essay.text));
-    suggestions.forEach(suggestion => {
-      const textAtPosition = essay.text.slice(suggestion.anchor.start, suggestion.anchor.end);
-      console.log(`Suggestion ${suggestion.id}: "${textAtPosition}" at [${suggestion.anchor.start}, ${suggestion.anchor.end}]`);
-      console.log(`Expected: "${suggestion.originalText}"`);
-      console.log(`Match: ${textAtPosition === suggestion.originalText ? '✓' : '✗'}`);
+    console.log("Essay text:", JSON.stringify(currentEssayText));
+    positionedSuggestions.forEach(suggestion => {
+      if (suggestion.anchor.start >= 0) {
+        const textAtPosition = currentEssayText.slice(suggestion.anchor.start, suggestion.anchor.end);
+        console.log(`Suggestion ${suggestion.id}: "${textAtPosition}" at [${suggestion.anchor.start}, ${suggestion.anchor.end}]`);
+        console.log(`Expected: "${suggestion.originalText}"`);
+        console.log(`Match: ${textAtPosition === suggestion.originalText ? '✓' : '✗'}`);
+      } else {
+        console.log(`Suggestion ${suggestion.id}: STALE - text not found`);
+      }
     });
-  }, [suggestions, essay.text]);
+  }, [rawSuggestions, currentEssayText]);
 
   // Function to add change to history
   const addToChangeHistory = (type: 'approve' | 'reject', suggestionId: string, change: ChangeDesc, suggestionStatus: 'open' | 'approved' | 'rejected') => {
@@ -200,7 +214,7 @@ export function EditorClient({ essay, suggestions }: Props) {
   };
 
   // Create decorations for suggestions with proper position mapping
-  const createSuggestionsExtension = () => {
+  const createSuggestionsExtension = useCallback(() => {
     return ViewPlugin.fromClass(
       class {
         decorations: DecorationSet;
@@ -213,6 +227,8 @@ export function EditorClient({ essay, suggestions }: Props) {
           if (update.docChanged) {
             // Add the new change to our history
             changeHistoryRef.current.push(update.changes);
+
+            // Rebuild decorations
             this.decorations = this.buildDecorations(update.view);
           } else if (update.viewportChanged) {
             this.decorations = this.buildDecorations(update.view);
@@ -222,8 +238,9 @@ export function EditorClient({ essay, suggestions }: Props) {
         buildDecorations(view: EditorView): DecorationSet {
           const openSuggestions = anchoredSuggestions.filter(s => s.status === 'open');
           const decorations = openSuggestions.map((suggestion) => {
-            // Calculate current positions through all changes
-            const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+            // Use current positions from anchored suggestions
+            const start = suggestion.currentStart;
+            const end = suggestion.currentEnd;
 
             // Ensure ranges are within document bounds
             const boundedStart = Math.max(0, Math.min(start, view.state.doc.length));
@@ -269,13 +286,13 @@ export function EditorClient({ essay, suggestions }: Props) {
         },
       }
     );
-  };
+  }, [anchoredSuggestions]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const startState = EditorState.create({
-      doc: essay.text,
+      doc: currentEssayText,
       extensions: [
         markdown(),
         EditorView.lineWrapping,
@@ -322,13 +339,13 @@ export function EditorClient({ essay, suggestions }: Props) {
       view?.destroy();
       viewRef.current = null;
     };
-  }, [essay.text, anchoredSuggestions]);
+  }, [currentEssayText, anchoredSuggestions, createSuggestionsExtension]);
 
   const handleApprove = (suggestion: AnchoredSuggestion) => {
     console.log("Approving suggestion:", suggestion.id);
     // Apply the text change
     if (viewRef.current) {
-      const { start, end } = mapPositionsThroughHistory(suggestion.originalStart, suggestion.originalEnd);
+      const { start, end } = { start: suggestion.currentStart, end: suggestion.currentEnd };
       const transaction = viewRef.current.state.update({
         changes: {
           from: start,
@@ -341,6 +358,13 @@ export function EditorClient({ essay, suggestions }: Props) {
       // Add to change history
       addToChangeHistory('approve', suggestion.id, transaction.changes, 'approved');
     }
+
+    // Update the current essay text to reflect the change
+    const newText =
+      currentEssayText.slice(0, suggestion.currentStart) +
+      suggestion.editedText +
+      currentEssayText.slice(suggestion.currentEnd);
+    setCurrentEssayText(newText);
 
     // Mark suggestion as approved (this will remove the highlight)
     setAnchoredSuggestions(prev =>
@@ -359,7 +383,7 @@ export function EditorClient({ essay, suggestions }: Props) {
     console.log("Rejecting suggestion:", suggestion.id);
     // Add reject action to history (no text change, just record the action)
     // Create a proper ChangeDesc for reject since there's no actual text change
-    const dummyChange = ChangeDesc.create(suggestion.originalStart, suggestion.originalEnd, '');
+    const dummyChange = ChangeDesc.create(suggestion.currentStart, suggestion.currentEnd, '');
     addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
 
     // Mark suggestion as rejected (this will remove the highlight)

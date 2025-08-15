@@ -4,13 +4,11 @@ export interface Essay {
   version: number; // Incremented with each change
 }
 
-export interface Suggestion {
+export interface RawSuggestion {
   id: string;
-  anchor: { start: number; end: number; stickiness: "join_left" | "join_right" };
   originalText: string;
   editedText: string;
   note?: string;
-  status: "open" | "approved" | "rejected" | "stale";
 }
 
 export const mockEssay: Essay = {
@@ -38,50 +36,30 @@ I believe in continuous learning and improvement.`,
   version: 1,
 };
 
-export const mockSuggestions: Suggestion[] = [
+export const mockRawSuggestions: RawSuggestion[] = [
   {
     id: "s1",
-    anchor: {
-      start: mockEssay.text.indexOf("writting"),
-      end: mockEssay.text.indexOf("writting") + "writting".length,
-    },
     originalText: "writting",
     editedText: "writing",
     note: "Spelling correction",
-    status: "open",
   },
   {
     id: "s2",
-    anchor: {
-      start: mockEssay.text.indexOf("grammar"),
-      end: mockEssay.text.indexOf("grammar") + "grammar".length,
-    },
     originalText: "grammar",
     editedText: "grammar",
     note: "This word is spelled correctly",
-    status: "open",
   },
   {
     id: "s3",
-    anchor: {
-      start: mockEssay.text.indexOf("fascenating"),
-      end: mockEssay.text.indexOf("fascenating") + "fascenating".length,
-    },
     originalText: "fascenating",
     editedText: "fascinating",
     note: "Spelling correction",
-    status: "open",
   },
   {
     id: "s4",
-    anchor: {
-      start: mockEssay.text.indexOf("engineer"),
-      end: mockEssay.text.indexOf("engineer") + "engineer".length,
-    },
     originalText: "engineer",
     editedText: "engineer",
     note: "This word is spelled correctly",
-    status: "open",
   },
 ];
 
@@ -89,22 +67,6 @@ export function getMockEssay(id: string): Essay {
   return { ...mockEssay, id };
 }
 
-export function getMockSuggestions(): Suggestion[] {
-  return [...mockSuggestions];
-}
-
-// Helper function to verify positions (for debugging)
-export function verifyPositions() {
-  const text = mockEssay.text;
-  console.log("Essay text:", JSON.stringify(text));
-
-  mockSuggestions.forEach((suggestion) => {
-    const textAtPosition = text.slice(suggestion.anchor.start, suggestion.anchor.end);
-    console.log(
-      `Suggestion ${suggestion.id}: "${textAtPosition}" at [${suggestion.anchor.start}, ${suggestion.anchor.end}]`
-    );
-    console.log(`Expected: "${suggestion.originalText}"`);
-    console.log(`Match: ${textAtPosition === suggestion.originalText ? "✓" : "✗"}`);
-    console.log("---");
-  });
+export function getMockRawSuggestions(): RawSuggestion[] {
+  return [...mockRawSuggestions];
 }
