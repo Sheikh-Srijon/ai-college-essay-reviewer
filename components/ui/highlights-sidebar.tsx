@@ -23,6 +23,69 @@ interface HighlightsSidebarProps {
 export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onReject, isVisible, focusedHighlightId }: HighlightsSidebarProps) {
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [sidebarTop, setSidebarTop] = useState(16); // Default top position
+
+  // Calculate sidebar position to stay above editor bottom
+  useEffect(() => {
+    const updateSidebarPosition = () => {
+      if (sidebarRef.current) {
+        const editorContainer = document.querySelector('.bg-white.border.border-gray-200.rounded-b-lg.shadow-lg.relative');
+        if (editorContainer) {
+          const editorRect = editorContainer.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+
+          // Use actual sidebar height instead of hardcoded value
+          const sidebarHeight = sidebarRef.current.offsetHeight;
+
+          // Find the actual editor content (the text area)
+          const editorContent = editorContainer.querySelector('[ref="containerRef"]') || editorContainer.querySelector('.cm-editor') || editorContainer;
+          const contentRect = editorContent.getBoundingClientRect();
+
+          // Use the actual content bottom, not the container bottom
+          const actualEditorBottom = contentRect.bottom;
+
+          // Start sidebar near the top of the editor, not at the bottom
+          const editorTop = editorRect.top;
+          const preferredTop = Math.max(16, editorTop + 20); // 20px below editor top
+
+          // Calculate the maximum allowed top position to keep sidebar above actual editor content bottom
+          const maxAllowedTop = actualEditorBottom - sidebarHeight - 20; // 20px margin above content bottom
+
+          // Use preferred top position, but ensure it doesn't go below editor content bottom
+          const finalTop = Math.min(preferredTop, maxAllowedTop);
+
+          // Additional safety check: ensure sidebar doesn't go below viewport
+          const viewportSafeTop = Math.min(finalTop, viewportHeight - sidebarHeight - 20);
+
+          // Final safety check: ensure we're not positioning below the editor content
+          const finalSafeTop = Math.min(viewportSafeTop, actualEditorBottom - sidebarHeight - 20);
+
+          setSidebarTop(finalSafeTop);
+        }
+      }
+    };
+
+    // Initial position calculation with delay to ensure editor is rendered
+    const initialTimer = setTimeout(updateSidebarPosition, 100);
+
+    // Update position on scroll and resize - more frequent updates for smooth positioning
+    window.addEventListener('scroll', updateSidebarPosition, { passive: true });
+    window.addEventListener('resize', updateSidebarPosition, { passive: true });
+
+    // Also update on any DOM changes that might affect editor position
+    const observer = new ResizeObserver(updateSidebarPosition);
+    const editorContainer = document.querySelector('.bg-white.border.border-gray-200.rounded-b-lg.shadow-lg.relative');
+    if (editorContainer) {
+      observer.observe(editorContainer);
+    }
+
+    return () => {
+      clearTimeout(initialTimer);
+      window.removeEventListener('scroll', updateSidebarPosition);
+      window.removeEventListener('resize', updateSidebarPosition);
+      observer.disconnect();
+    };
+  }, []);
 
   // Scroll to focused card when it changes
   useEffect(() => {
@@ -60,7 +123,14 @@ export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onR
   };
 
   return (
-    <div ref={sidebarRef} className="fixed right-4 top-1/2 transform -translate-y-1/2 w-80 max-h-[80vh] overflow-y-auto bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg z-40">
+    <div
+      ref={sidebarRef}
+      className="fixed w-80 max-h-[80vh] overflow-y-auto bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg z-40"
+      style={{
+        left: 'calc(50% + 210mm/2 + 16px)', // Position to the right of A4 editor (210mm width)
+        top: `${sidebarTop}px`
+      }}
+    >
       <div className="p-4">
         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
           <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
