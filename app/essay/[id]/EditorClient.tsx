@@ -355,7 +355,6 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           },
           ".suggestion-highlight": {
             backgroundColor: "#fef3c7",
-            borderBottom: "2px solid #f59e0b",
             cursor: "pointer",
             borderRadius: "2px",
             padding: "1px 2px",
@@ -546,28 +545,58 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
       )}
 
       {/* Highlights Sidebar - Google Docs style */}
-      <HighlightsSidebar
-        highlights={anchoredSuggestions.filter(s => s.status === 'open').map(s => ({
-          id: s.id,
-          originalText: s.originalText,
-          editedText: s.editedText,
-          note: s.note,
-          start: s.currentStart,
-          end: s.currentEnd
-        }))}
-        onHighlightClick={(highlight) => {
-          // Focus on the highlight in the editor
-          if (viewRef.current) {
-            const { start } = highlight;
-            viewRef.current.dispatch({
-              selection: { anchor: start, head: start }
-            });
-            // Scroll to the position
-            viewRef.current.requestMeasure();
-          }
-        }}
-        isVisible={anchoredSuggestions.filter(s => s.status === 'open').length > 0}
-      />
+      <div className="relative">
+        <HighlightsSidebar
+          highlights={anchoredSuggestions.filter(s => s.status === 'open').map(s => ({
+            id: s.id,
+            originalText: s.originalText,
+            editedText: s.editedText,
+            note: s.note,
+            start: s.currentStart,
+            end: s.currentEnd
+          }))}
+          onHighlightClick={(highlight) => {
+            // Find the suggestion in anchoredSuggestions
+            const suggestion = anchoredSuggestions.find(s => s.id === highlight.id);
+            if (suggestion && viewRef.current) {
+              // Use the current positions directly (these are already updated after changes)
+              const start = suggestion.currentStart;
+              const end = suggestion.currentEnd;
+
+              // Set cursor position at the start of the highlight
+              viewRef.current.dispatch({
+                selection: { anchor: start, head: start }
+              });
+
+              // Force a layout update
+              viewRef.current.requestMeasure();
+
+              // More reliable scrolling - scroll to the position
+              setTimeout(() => {
+                if (viewRef.current) {
+                  // Get the DOM element for the highlight
+                  const highlightElement = document.querySelector(`[data-suggestion-id="${highlight.id}"]`);
+                  if (highlightElement) {
+                    // Scroll the highlight into view
+                    highlightElement.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'center',
+                      inline: 'center'
+                    });
+
+                    // Add visual focus effect
+                    highlightElement.classList.add('highlight-focus');
+                    setTimeout(() => {
+                      highlightElement.classList.remove('highlight-focus');
+                    }, 2000);
+                  }
+                }
+              }, 100);
+            }
+          }}
+          isVisible={anchoredSuggestions.filter(s => s.status === 'open').length > 0}
+        />
+      </div>
     </div>
   );
 }
