@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
 
 // Essay interface
 interface Essay {
@@ -20,7 +21,7 @@ async function mock_get_essays(): Promise<Essay[]> {
   return [
     {
       id: "adv-001",
-      title: "Personal Statement - Computer Science",
+      title: "Personal Statement",
       school: "Stanford University",
       type: "Personal Statement"
     },
@@ -51,10 +52,11 @@ async function mock_get_essays(): Promise<Essay[]> {
   ];
 }
 
-export default function EssayListPage() {
+export default function EssaysPage() {
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchEssays = async () => {
@@ -72,6 +74,10 @@ export default function EssayListPage() {
 
     fetchEssays();
   }, []);
+
+  const handleCardClick = (essayId: string) => {
+    router.push(`/essay/${essayId}`);
+  };
 
   if (loading) {
     return (
@@ -98,10 +104,15 @@ export default function EssayListPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {essays.map((essay) => (
-          <div key={essay.id} className="essay-card p-6" style={{ border: '2px solid red' }}>
-            <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex-1 mr-3">
+          <div
+            key={essay.id}
+            className="essay-card p-6 flex flex-col h-64 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+            onClick={() => handleCardClick(essay.id)}
+          >
+            <div className="flex-1 flex flex-col">
+              {/* Header with title and badge */}
+              <div className="flex items-start justify-between mb-4 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900 leading-tight flex-1 mr-3 line-clamp-2 h-12 overflow-hidden">
                   {essay.title}
                 </h3>
                 <Badge variant="secondary" className="flex-shrink-0">
@@ -109,14 +120,14 @@ export default function EssayListPage() {
                 </Badge>
               </div>
 
-              <div className="space-y-3">
+              {/* Content area */}
+              <div className="flex-1 space-y-3">
                 <div>
                   <span className="text-sm font-medium text-purple-700">School:</span>
                   <p className="text-gray-900">{essay.school}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-purple-700">Essay ID:</span>
-                  <p className="text-sm text-gray-600 font-mono">{essay.id}</p>
+
                 </div>
               </div>
             </div>
