@@ -5,6 +5,7 @@ import type { Rubric, RubricCriterion } from "@/types/essay";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+
 type Props = {
   essayId: string;
 };
@@ -23,6 +24,7 @@ export function RubricScoringClient({ essayId }: Props) {
   const [rubric, setRubric] = useState<Rubric | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
     const fetchRubric = async () => {
@@ -91,8 +93,10 @@ export function RubricScoringClient({ essayId }: Props) {
     <div className="flex justify-center p-6">
       <div className="w-full max-w-4xl">
         {/* Header */}
+
+
         <div className="bg-white border border-gray-200 rounded-t-lg p-4 shadow-sm mb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
             <h2 className="text-xl font-bold text-gray-900">Essay Rubric Assessment</h2>
             <div className="flex items-center gap-4">
               <div className="text-center">
@@ -105,16 +109,8 @@ export function RubricScoringClient({ essayId }: Props) {
             </div>
           </div>
         </div>
-
-        {/* A4 Paper-like Container */}
-        <div className="bg-white border border-gray-200 rounded-b-lg shadow-lg">
-          <div className="p-8" style={{
-            minHeight: '297mm', // A4 height
-            maxWidth: '210mm',  // A4 width
-            margin: '0 auto',
-            backgroundColor: 'white',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
+        {isExpanded && (
+          <div className="bg-white border border-gray-200 rounded-b-lg shadow-lg">
             {/* Rubric Criteria */}
             <div className="space-y-6">
               {rubric.criteria.map((criterion) => (
@@ -187,32 +183,9 @@ export function RubricScoringClient({ essayId }: Props) {
                 </Card>
               ))}
             </div>
-
-            {/* Summary */}
-            <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Overall Assessment</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">{rubric.total_score}</div>
-                  <div className="text-sm text-gray-600">Total Points</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">
-                    {Math.round((rubric.total_score / 30) * 100)}%
-                  </div>
-                  <div className="text-sm text-gray-600">Percentage</div>
-                </div>
-                <div className="text-center">
-                  <Badge className={`px-4 py-2 text-base font-medium ${getBandColor(rubric.band)}`}>
-                    {rubric.band}
-                  </Badge>
-                  <div className="text-sm text-gray-600 mt-1">Performance Band</div>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </div >
+    </div >
   );
 } 
