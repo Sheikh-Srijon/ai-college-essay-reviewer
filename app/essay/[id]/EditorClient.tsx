@@ -57,6 +57,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        // Temporarily remove the popup when clicking outside
         setPopup(null);
       }
     };
