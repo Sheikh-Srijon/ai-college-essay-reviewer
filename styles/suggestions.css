@@ -7,37 +7,121 @@
 
 /* Suggestion popup styling */
 .suggestion-popup {
-  background-color: #fed7aa !important; /* Light orange background */
-  border: 1px solid #fdba74 !important; /* Orange border */
+  background-color: #fff7ed !important; /* Very light, faint orange background */
+  border: 1px solid #fed7aa !important; /* Light orange border */
   border-radius: 8px !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
   padding: 16px !important;
 }
 
+/* Close button styling */
+.suggestion-popup .close-button {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  background-color: #ef4444 !important; /* Red background */
+  border: none !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.suggestion-popup .close-button:hover {
+  background-color: #dc2626 !important; /* Darker red on hover */
+}
+
+.suggestion-popup .close-button .close-icon {
+  color: #000000 !important; /* Black cross */
+  font-weight: bold !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+/* Action buttons styling */
+.suggestion-popup .action-button {
+  flex: 1 !important;
+  padding: 8px 16px !important;
+  border-radius: 9999px !important; /* Fully rounded */
+  border: none !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.suggestion-popup .approve-button {
+  background-color: #16a34a !important; /* Green background */
+  color: #ffffff !important; /* White text */
+}
+
+.suggestion-popup .approve-button:hover {
+  background-color: #15803d !important; /* Darker green on hover */
+}
+
+.suggestion-popup .reject-button {
+  background-color: #dc2626 !important; /* Red background */
+  color: #ffffff !important; /* White text */
+}
+
+.suggestion-popup .reject-button:hover {
+  background-color: #b91c1c !important; /* Darker red on hover */
+}
+
+/* Text styling - all dark black */
 .suggestion-popup .text-orange-800 {
-  color: #9a3412 !important; /* Dark orange text */
+  color: #000000 !important; /* Dark black text */
 }
 
 .suggestion-popup .bg-green-100 {
-  background-color: #dcfce7 !important; /* Light green background */
+  background-color: transparent !important; /* No background */
+  border: none !important; /* No border */
 }
 
 .suggestion-popup .border-green-300 {
-  border-color: #86efac !important; /* Green border */
+  border: none !important; /* No border */
 }
 
 .suggestion-popup .text-green-800 {
-  color: #166534 !important; /* Dark green text */
+  color: #000000 !important; /* Dark black text */
 }
 
 .suggestion-popup .bg-white {
-  background-color: #ffffff !important; /* White background */
+  background-color: transparent !important; /* No background */
+  border: none !important; /* No border */
 }
 
 .suggestion-popup .border-orange-200 {
-  border-color: #fed7aa !important; /* Light orange border */
+  border: none !important; /* No border */
 }
 
 .suggestion-popup .text-gray-800 {
-  color: #1f2937 !important; /* Dark gray text */
+  color: #000000 !important; /* Dark black text */
+}
+
+/* Inline layout for labels and values */
+.suggestion-popup .field-row {
+  display: block !important; /* Stack labels and values vertically */
+  margin-bottom: 12px !important;
+}
+
+.suggestion-popup .field-label {
+  font-size: 14px !important; /* Same as CodeMirror markdown */
+  font-weight: 600 !important;
+  color: #000000 !important; /* Dark black text */
+  display: block !important; /* Block display for own line */
+  margin-bottom: 4px !important; /* Small gap between label and value */
+  line-height: 1 !important; /* Tight line height for labels */
+}
+
+.suggestion-popup .field-value {
+  font-size: 14px !important; /* Same as CodeMirror markdown */
+  color: #000000 !important; /* Dark black text */
+  display: block !important; /* Block display for own line */
+  line-height: 1.2 !important; /* Reduced line height for tighter spacing */
 }

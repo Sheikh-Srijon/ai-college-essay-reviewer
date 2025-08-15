@@ -491,28 +491,24 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
             transform: "translateY(-50%)",
             width: 300,
             zIndex: 50,
-            backgroundColor: "#fed7aa", // Light orange background
-            border: "1px solid #fdba74", // Orange border
+            backgroundColor: "#fff7ed", // Very light, faint orange background
+            border: "1px solid #fed7aa", // Light orange border
             borderRadius: "8px",
             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            padding: "16px"
+            padding: "16px",
           }}
           className="suggestion-popup"
         >
           <div className="space-y-3 mb-4">
-            <div>
-              <div className="text-xs text-orange-800 mb-1 font-medium">Edit:</div>
-              <div className="bg-green-100 border border-green-300 p-2 rounded text-sm font-mono text-green-800">
-                {popup.suggestion.editedText}
-              </div>
+            <div className="field-row">
+              <span className="field-label">Edit:</span>
+              <span className="field-value">{popup.suggestion.editedText}</span>
             </div>
 
             {popup.suggestion.note && (
-              <div>
-                <div className="text-xs text-orange-800 mb-1 font-medium">Comment:</div>
-                <div className="text-sm text-gray-800 bg-white border border-orange-200 p-2 rounded">
-                  {popup.suggestion.note}
-                </div>
+              <div className="field-row">
+                <span className="field-label">Comment:</span>
+                <span className="field-value">{popup.suggestion.note}</span>
               </div>
             )}
           </div>
@@ -520,13 +516,13 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
           <div className="flex gap-2">
             <button
               onClick={() => handleApprove(popup.suggestion)}
-              className="flex-1 px-3 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+              className="action-button approve-button"
             >
               Approve
             </button>
             <button
               onClick={() => handleReject(popup.suggestion)}
-              className="flex-1 px-3 py-2 rounded bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+              className="action-button reject-button "
             >
               Reject
             </button>
@@ -534,9 +530,9 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
 
           <button
             onClick={() => setPopup(null)}
-            className="absolute top-2 right-2 text-orange-600 hover:text-orange-800 transition-colors"
+            className="close-button"
           >
-            ✕
+            <span className="close-icon">✕</span>
           </button>
         </div>
       )}
