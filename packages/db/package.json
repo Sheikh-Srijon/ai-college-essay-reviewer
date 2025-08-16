@@ -1,0 +1,31 @@
+{
+  "name": "@app/db",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./index.ts"
+  },
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "clean": "rm -rf node_modules .turbo",
+    "format": "prisma format && prettier --check \"**/*.{ts,json}\"",
+    "lint": "eslint .",
+    "db:generate": "prisma generate",
+    "db:push": "dotenv -e ../../.env.local -- prisma db push --skip-generate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "kysely": "0.27.3",
+    "pg": "8.11.5"
+  },
+  "devDependencies": {
+    "dotenv-cli": "7.3.0",
+    "eslint": "8.57.0",
+    "prettier": "3.2.5",
+    "prisma": "5.9.1",
+    "prisma-kysely": "1.7.1",
+    "@types/pg": "8.11.0",
+    "typescript": "5.4.5"
+  }
+}

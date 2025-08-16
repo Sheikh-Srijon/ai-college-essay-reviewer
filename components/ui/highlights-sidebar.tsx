@@ -146,10 +146,12 @@ export function HighlightsSidebar({ highlights, onHighlightClick, onApprove, onR
       }}
     >
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-          AI Suggestions ({highlights.length})
-        </h3>
+        <div className="sticky top-0 bg-white/90 backdrop-blur-sm pb-3 mb-3 border-b border-gray-200/50">
+          <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+            AI Suggestions ({highlights.length})
+          </h3>
+        </div>
 
         <div className="space-y-3">
           {highlights.map((highlight, index) => (

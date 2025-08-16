@@ -9,6 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@app/db": "workspace:*",
+    "next": "^15.4.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "@codemirror/lang-markdown": "^6.3.4",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.1",
