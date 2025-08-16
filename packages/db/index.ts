@@ -1,10 +1,8 @@
-import { createKysely } from "@vercel/postgres-kysely";
-
-import type { DB } from "./prisma/types";
+import { db } from "./client";
 
 export { jsonArrayFrom, jsonObjectFrom } from "kysely/helpers/postgres";
 
 export * from "./prisma/types";
-export * from "./prisma/enum";
+export * from "./prisma/enums";
 
-export const db = createKysely<DB>();
+export { db };

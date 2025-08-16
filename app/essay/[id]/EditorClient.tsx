@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { EditorState, ChangeDesc, Text } from "@codemirror/state";
+import { EditorState, ChangeDesc, Text, Range } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { markdown } from "@codemirror/lang-markdown";
 import type { Essay } from "@/public/mockData";
@@ -305,7 +305,7 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
             return null;
           }).filter(Boolean);
 
-          return Decoration.set(decorations);
+          return Decoration.set(decorations.filter((d): d is Range<Decoration> => d !== null));
         }
       },
       {
@@ -452,8 +452,10 @@ export function EditorClient({ essay, rawSuggestions }: Props) {
         return;
       }
 
-      const dummyChange = ChangeDesc.create(start, end, '');
-      addToChangeHistory('reject', suggestion.id, dummyChange, 'rejected');
+      // Create a minimal change for reject (no actual text change)
+      const dummyChange = { from: start, to: end, insert: '' };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      addToChangeHistory('reject', suggestion.id, dummyChange as any, 'rejected');
     }
 
     // Mark suggestion as rejected (this will remove the highlight)

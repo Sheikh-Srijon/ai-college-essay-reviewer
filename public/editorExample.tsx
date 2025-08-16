@@ -34,7 +34,7 @@ export const EssayEditor: React.FC<EditorProps> = ({ essayId }) => {
   }, [rawSuggestions, currentText]);
 
   // Handle text changes (e.g., when user edits the essay)
-  const handleTextChange = (newText: string, changeStart: number, changeEnd: number) => {
+  const handleTextChangeLocal = (newText: string, changeStart: number, changeEnd: number) => {
     const updatedSuggestions = handleTextChange(
       positionedSuggestions,
       currentText,
@@ -87,7 +87,7 @@ export const EssayEditor: React.FC<EditorProps> = ({ essayId }) => {
         <div className="essay-text">
           <textarea
             value={currentText}
-            onChange={(e) => handleTextChange(e.target.value, 0, currentText.length)}
+            onChange={(e) => handleTextChangeLocal(e.target.value, 0, currentText.length)}
             placeholder="Essay text..."
             rows={20}
             cols={80}

@@ -147,7 +147,7 @@ export function RubricScoringClient({ essayId }: Props) {
                         Strengths
                       </h4>
                       <ul className="space-y-1">
-                        {criterion.strengths.map((strength, index) => (
+                        {criterion.strengths.map((strength: string, index: number) => (
                           <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                             <span className="text-green-500 mt-1">•</span>
                             {strength}
@@ -164,7 +164,7 @@ export function RubricScoringClient({ essayId }: Props) {
                           Areas to Improve
                         </h4>
                         <ul className="space-y-1">
-                          {criterion.areas_to_improve.map((area, index) => (
+                          {criterion.areas_to_improve.map((area: string, index: number) => (
                             <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                               <span className="text-orange-500 mt-1">•</span>
                               {area}
