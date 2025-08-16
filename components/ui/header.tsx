@@ -48,7 +48,7 @@ export function Header() {
           ) : (
             <>
               <Link href="/login">
-                <Button variant="outline" className="text-white border-white hover:bg-white hover:text-purple-600">
+                <Button variant="outline" className="bg-blue-700 text-white border-white hover:bg-white hover:text-purple-600">
                   Sign In
                 </Button>
               </Link>
