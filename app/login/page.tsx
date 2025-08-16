@@ -25,16 +25,17 @@ export default function LoginPage() {
     });
   }, [router]);
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      await signIn("google", { callbackUrl: "/essays" });
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Google sign-in functionality temporarily hidden
+  // const handleGoogleSignIn = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     await signIn("google", { callbackUrl: "/essays" });
+  //   } catch (error) {
+  //     console.error("Google sign-in error:", error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +71,8 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Google Sign In */}
-          <Button
+          {/* Google Sign In - Temporarily Hidden */}
+          {/* <Button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
             className="w-full bg-white text-gray-900 border border-gray-300 hover:bg-gray-50"
@@ -105,7 +106,7 @@ export default function LoginPage() {
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-white px-2 text-gray-500">Or continue with</span>
             </div>
-          </div>
+          </div> */}
 
           {/* Magic Link Form */}
           <form onSubmit={handleMagicLink} className="space-y-4">

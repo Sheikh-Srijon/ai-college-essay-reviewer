@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import EmailProvider from "next-auth/providers/email";
 import { db } from "@app/db";
 import type { Adapter } from "next-auth/adapters";
 import { Resend } from "resend";
@@ -8,7 +10,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Custom Kysely adapter for NextAuth
 const kyselyAdapter: Adapter = {
-  createUser: async (data) => {
+  createUser: async (data: any) => {
     const result = await db
       .insertInto("User")
       .values({
@@ -24,23 +26,29 @@ const kyselyAdapter: Adapter = {
     return result || data;
   },
 
-  getUser: async (id) => {
+  getUser: async (id: string) => {
     const user = await db.selectFrom("User").selectAll().where("id", "=", id).executeTakeFirst();
 
-    return user || null;
+    return (user as any) || null;
   },
 
-  getUserByEmail: async (email) => {
+  getUserByEmail: async (email: string) => {
     const user = await db
       .selectFrom("User")
       .selectAll()
       .where("email", "=", email)
       .executeTakeFirst();
 
-    return user || null;
+    return (user as any) || null;
   },
 
-  getUserByAccount: async ({ provider, providerAccountId }) => {
+  getUserByAccount: async ({
+    provider,
+    providerAccountId,
+  }: {
+    provider: string;
+    providerAccountId: string;
+  }) => {
     const account = await db
       .selectFrom("Account")
       .innerJoin("User", "User.id", "Account.userId")
@@ -60,10 +68,10 @@ const kyselyAdapter: Adapter = {
       emailVerified: account.emailVerified,
     };
 
-    return user;
+    return user as any;
   },
 
-  updateUser: async ({ id, ...data }) => {
+  updateUser: async ({ id, ...data }: { id: string; [key: string]: any }) => {
     const result = await db
       .updateTable("User")
       .set(data)
@@ -71,16 +79,16 @@ const kyselyAdapter: Adapter = {
       .returningAll()
       .executeTakeFirst();
 
-    return result || { id, ...data };
+    return (result as any) || { id, ...data };
   },
 
-  deleteUser: async (id) => {
+  deleteUser: async (id: string) => {
     await db.deleteFrom("User").where("id", "=", id).execute();
 
     return null;
   },
 
-  linkAccount: async (data) => {
+  linkAccount: async (data: any) => {
     await db
       .insertInto("Account")
       .values({
@@ -102,7 +110,13 @@ const kyselyAdapter: Adapter = {
     return data;
   },
 
-  unlinkAccount: async ({ provider, providerAccountId }) => {
+  unlinkAccount: async ({
+    provider,
+    providerAccountId,
+  }: {
+    provider: string;
+    providerAccountId: string;
+  }) => {
     await db
       .deleteFrom("Account")
       .where("provider", "=", provider)
@@ -112,7 +126,7 @@ const kyselyAdapter: Adapter = {
     return undefined;
   },
 
-  createSession: async (data) => {
+  createSession: async (data: any) => {
     const result = await db
       .insertInto("Session")
       .values({
@@ -124,10 +138,10 @@ const kyselyAdapter: Adapter = {
       .returningAll()
       .executeTakeFirst();
 
-    return result || data;
+    return (result as any) || data;
   },
 
-  getSessionAndUser: async (sessionToken) => {
+  getSessionAndUser: async (sessionToken: string) => {
     const session = await db
       .selectFrom("Session")
       .innerJoin("User", "User.id", "Session.userId")
@@ -135,7 +149,7 @@ const kyselyAdapter: Adapter = {
       .where("sessionToken", "=", sessionToken)
       .executeTakeFirst();
 
-    if (!session) return [null, null];
+    if (!session) return null;
 
     // Extract session and user data from the flattened join result
     const sessionData = {
@@ -153,10 +167,13 @@ const kyselyAdapter: Adapter = {
       emailVerified: session.emailVerified,
     };
 
-    return [sessionData, user];
+    return {
+      session: sessionData as any,
+      user: user as any,
+    };
   },
 
-  updateSession: async (data) => {
+  updateSession: async (data: any) => {
     const result = await db
       .updateTable("Session")
       .set(data)
@@ -164,16 +181,16 @@ const kyselyAdapter: Adapter = {
       .returningAll()
       .executeTakeFirst();
 
-    return result || data;
+    return (result as any) || data;
   },
 
-  deleteSession: async (sessionToken) => {
+  deleteSession: async (sessionToken: string) => {
     await db.deleteFrom("Session").where("sessionToken", "=", sessionToken).execute();
 
     return null;
   },
 
-  createVerificationToken: async (data) => {
+  createVerificationToken: async (data: any) => {
     await db
       .insertInto("VerificationToken")
       .values({
@@ -186,7 +203,7 @@ const kyselyAdapter: Adapter = {
     return data;
   },
 
-  useVerificationToken: async ({ identifier, token }) => {
+  useVerificationToken: async ({ identifier, token }: { identifier: string; token: string }) => {
     const verificationToken = await db
       .selectFrom("VerificationToken")
       .selectAll()
@@ -202,22 +219,29 @@ const kyselyAdapter: Adapter = {
         .execute();
     }
 
-    return verificationToken;
+    return verificationToken as any;
   },
 };
 
 // Custom Email Provider
-const emailProvider = {
-  id: "email",
-  type: "email",
-  name: "Email",
-  server: null,
-  from: process.env.RESEND_FROM || "noreply@yourdomain.com",
-  maxAge: 24 * 60 * 60, // 24 hours
+const emailProvider = EmailProvider({
+  server: {
+    host: "smtp.resend.com",
+    port: 587,
+    auth: {
+      user: "resend",
+      pass: process.env.RESEND_API_KEY || "",
+    },
+  },
+  from: process.env.RESEND_FROM || "onboarding@resend.dev",
   sendVerificationRequest: async ({ identifier, url, provider }) => {
     try {
+      console.log("=== MAGIC LINK EMAIL DEBUG ===");
+      console.log("Environment RESEND_FROM:", process.env.RESEND_FROM);
+      console.log("Provider from field:", provider.from);
       console.log("Sending verification email to:", identifier);
-      console.log("Using from address:", provider.from);
+      console.log("Magic link URL:", url);
+      console.log("================================");
 
       await resend.emails.send({
         from: provider.from,
@@ -234,27 +258,29 @@ const emailProvider = {
         `,
       });
 
-      console.log("Verification email sent successfully to:", identifier);
+      console.log("✅ Magic link email sent successfully to:", identifier);
+      console.log("✅ Used from address:", provider.from);
     } catch (error) {
-      console.error("Failed to send verification email:", error);
+      console.error("❌ Failed to send magic link email:", error);
       console.error("Error details:", {
         identifier,
         from: provider.from,
-        error: error.message,
-        stack: error.stack,
+        envResendFrom: process.env.RESEND_FROM,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
       throw new Error("Failed to send verification email");
     }
   },
-};
+});
 
 const handler = NextAuth({
   adapter: kyselyAdapter,
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    // GoogleProvider({
+    //   clientId: process.env.GOOGLE_CLIENT_ID!,
+    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    // }),
     emailProvider,
   ],
   session: {
@@ -266,7 +292,7 @@ const handler = NextAuth({
   callbacks: {
     async session({ session, token }) {
       if (token.sub && session.user) {
-        session.user.id = token.sub;
+        (session.user as any).id = token.sub;
       }
       return session;
     },

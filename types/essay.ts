@@ -91,12 +91,12 @@ export interface RubricCriterion {
 
 export interface Rubric {
   criteria: [
-    Criterion, // narrative_voice
-    Criterion, // reflection_insight
-    Criterion, // structure_flow
-    Criterion, // specificity_detail
-    Criterion, // purpose_fit
-    Criterion // mechanics_style
+    RubricCriterion, // narrative_voice
+    RubricCriterion, // reflection_insight
+    RubricCriterion, // structure_flow
+    RubricCriterion, // specificity_detail
+    RubricCriterion, // purpose_fit
+    RubricCriterion, // mechanics_style
   ];
   total_score: number; // 0–30
   band: "Needs Work" | "Solid" | "Strong" | "Exceptional";
