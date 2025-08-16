@@ -16,7 +16,7 @@ export function Header() {
     <header className="bg-purple-600 text-white px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <HamburgerMenu />
+          {session && <HamburgerMenu />}
           <Link href="/" className="text-xl font-bold hover:text-purple-100 transition-colors">
             AI College Essay Reviewer
           </Link>
@@ -39,7 +39,7 @@ export function Header() {
                   variant="outline"
                   size="sm"
                   onClick={handleSignOut}
-                  className="text-white border-white hover:bg-white hover:text-purple-600"
+                  className="bg-blue-700 text-white border-white hover:bg-white hover:text-purple-600"
                 >
                   Sign Out
                 </Button>
