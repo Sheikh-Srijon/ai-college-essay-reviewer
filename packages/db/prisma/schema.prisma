@@ -103,8 +103,7 @@ model Essay {
   school      String?
   type        String   // Common App, Why Us, Why Major, etc.
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // Essay metadata
   wordCount   Int      @default(0)
   status      EssayStatus @default(DRAFT)
