@@ -27,6 +27,9 @@ export default function HomePage() {
               <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-purple-600 text-lg px-8 py-4">
                 <Link href="/essays">Review Your Essay Now</Link>
               </Button>
+              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-purple-600 text-lg px-6 py-4">
+                <Link href="/login">Sign In</Link>
+              </Button>
             </div>
           </div>
         </div>
